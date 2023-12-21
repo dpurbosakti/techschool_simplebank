@@ -55,6 +55,7 @@ func EqCreateUserParams(arg db.CreateUserParams, password string) gomock.Matcher
 
 func TestCreateUser(t *testing.T) {
 	user, password := randomUser(t)
+	longPassword := util.RandomString(73)
 	arg := db.CreateUserParams{
 		Username: user.Username,
 		FullName: user.FullName,
@@ -185,6 +186,25 @@ func TestCreateUser(t *testing.T) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
 			},
 		},
+		{
+			name: "PasswordTooLong",
+			body: gin.H{
+				"username":  user.Username,
+				"password":  longPassword,
+				"full_name": user.FullName,
+				"email":     user.Email,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+
+				store.EXPECT().
+					CreateUser(gomock.Any(), gomock.Eq(arg)).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				// check response
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
 	}
 
 	for i := range testCase {
@@ -240,4 +260,142 @@ func requireBodyMatchUser(t *testing.T, body *bytes.Buffer, user db.User) {
 	require.Equal(t, user.Email, gotUser.Email)
 	require.Empty(t, gotUser.HashedPassword)
 
+}
+
+func TestLoginUser(t *testing.T) {
+	user := db.User{Username: "maynard", HashedPassword: "$2a$10$5s/fY0thtEMZQuVMFHcqZesuecOPvx.AvwjoaOz2HSNuDYbRqTDl2"}
+	testCase := []struct {
+		name          string
+		body          gin.H
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			body: gin.H{
+				"username": user.Username,
+				"password": "secret",
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				// build stubs
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq(user.Username)).
+					Times(1).
+					Return(user, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				// check response
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchLoginUser(t, recorder.Body, user)
+			},
+		},
+		{
+			name: "BadRequest",
+			body: gin.H{
+				"username": user.Username,
+				"password": "test",
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				// build stubs
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq(user.Username)).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				// check response
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "UnAuthorized",
+			body: gin.H{
+				"username": user.Username,
+				"password": "invalid",
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				// build stubs
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq(user.Username)).
+					Times(1).
+					Return(user, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				// check response
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+		},
+		{
+			name: "NotFound",
+			body: gin.H{
+				"username": "notfound",
+				"password": "secret",
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				// build stubs
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq("notfound")).
+					Times(1).
+					Return(db.User{}, sql.ErrNoRows)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				// check response
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+		{
+			name: "InternalServerError",
+			body: gin.H{
+				"username": "notfound",
+				"password": "secret",
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				// build stubs
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq("notfound")).
+					Times(1).
+					Return(db.User{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				// check response
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+	}
+	for i := range testCase {
+		tc := testCase[i]
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+			// start test server and send request
+			server := NewTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			json, err := json.Marshal(tc.body)
+			require.NoError(t, err)
+
+			body := bytes.NewReader(json)
+			url := "/users/login"
+			request, err := http.NewRequest(http.MethodPost, url, body)
+			require.NoError(t, err)
+
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
+func requireBodyMatchLoginUser(t *testing.T, body *bytes.Buffer, user db.User) {
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var gotLoginUser loginUserResponse
+
+	err = json.Unmarshal(data, &gotLoginUser)
+	require.NoError(t, err)
+	require.Equal(t, user.Username, gotLoginUser.User.Username)
+	require.NotEmpty(t, gotLoginUser)
+	require.NotEmpty(t, gotLoginUser.AccessToken)
 }
