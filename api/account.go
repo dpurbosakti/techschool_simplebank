@@ -24,7 +24,7 @@ type deleteAccountRequest struct {
 }
 
 type updateAccountRequest struct {
-	ID      int64 `json:"id" binding:"required,min=1"`
+	// ID      int64 `json:"id" binding:"required,min=1"`
 	Balance int64 `json:"balance" binding:"required,min=1"`
 }
 
@@ -124,8 +124,9 @@ func (s *Server) updateAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.UpdateAccountParams{
-		ID:      req.ID,
+		Owner:   authPayload.Username,
 		Balance: req.Balance,
 	}
 
@@ -160,18 +161,4 @@ func (s *Server) deleteAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-
-	// if err != nil {
-	// 	if err == sql.ErrNoRows {
-	// 		ctx.JSON(http.StatusNotFound, errorResponse(err))
-	// 		return
-	// 	} else {
-	// 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-	// 		return
-	// 	}
-	// }
-
-	// ctx.JSON(http.StatusOK, gin.H{
-	// 	"status": "deleted",
-	// })
 }
