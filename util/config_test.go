@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	dbDriver      = "postgres"
-	dbSource      = "postgresql://root:mokopass@localhost:5432/simple_bank?sslmode=disable"
-	serverAddress = "0.0.0.0:8080"
+	dbDriver          = "postgres"
+	dbSource          = "postgresql://root:mokopass@localhost:5432/simple_bank?sslmode=disable"
+	httpServerAddress = "0.0.0.0:8080"
 )
 
 func TestLoadConfigFail(t *testing.T) {
@@ -24,5 +24,5 @@ func TestLoadConfigSuccess(t *testing.T) {
 	require.NotEmpty(t, config)
 	require.Equal(t, config.DBDriver, dbDriver)
 	require.Equal(t, config.DBSource, dbSource)
-	require.Equal(t, config.ServerAddress, serverAddress)
+	require.Equal(t, config.HTTPServerAddress, httpServerAddress)
 }

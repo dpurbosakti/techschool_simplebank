@@ -57,4 +57,14 @@ dockerrunbuildcontainer:
 dockerstart:
 	docker start simplebank
 
-.PHONY: postgres postgresrun createdb dropdb migrateup migrateup1 migratedown migratedown1 new_migration db_docs db_schema sqlc server mock testcoverhtml dockerbuildimage dockerrunbuildcontainer dockerstart
+proto:
+	rm -f pb/*.go
+	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative \
+    --go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+    proto/*.proto
+
+# after running this command, before u call the RPC, try tp check the package and service, then use package <package_name> and service <service_name> 
+evans:
+	evans --host localhost --port 9090 -r repl
+
+.PHONY: postgres postgresrun createdb dropdb migrateup migrateup1 migratedown migratedown1 new_migration db_docs db_schema sqlc server mock testcoverhtml dockerbuildimage dockerrunbuildcontainer dockerstart proto evans
