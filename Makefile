@@ -81,6 +81,7 @@ proto:
 	rm -f pb/*.go
 	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative \
     --go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+	--grpc-gateway_out=pb --grpc-gateway_opt=paths=source_relative \
     proto/*.proto
 
 # after running this command, before u call the RPC, try tp check the package and service, then use package <package_name> and service <service_name> 
