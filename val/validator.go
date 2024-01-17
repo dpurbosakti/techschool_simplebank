@@ -8,7 +8,7 @@ import (
 
 var (
 	isValidUsername = regexp.MustCompile(`^[a-z0-9_]+$`).MatchString
-	isValidFullName = regexp.MustCompile(`^[a-zA-Z\\s]+$`).MatchString
+	isValidFullName = regexp.MustCompile(`^[a-zA-Z\s]+$`).MatchString
 )
 
 func ValidateString(value string, minLength int, maxLength int) error {
@@ -19,11 +19,17 @@ func ValidateString(value string, minLength int, maxLength int) error {
 	return nil
 }
 
+// ValidateUsername validates a username.
+// It checks if the username length is between 3 and 100 characters,
+// and if it contains only lowercase letters, digits, or underscores.
+// If any validation fails, it returns an error.
 func ValidateUsername(value string) error {
+	// Check if the username length is valid
 	if err := ValidateString(value, 3, 100); err != nil {
 		return err
 	}
 
+	// Check if the username contains only valid characters
 	if !isValidUsername(value) {
 		return fmt.Errorf("must contain only lowercase letters, digits, or underscore")
 	}
