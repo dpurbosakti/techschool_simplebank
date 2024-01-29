@@ -4,7 +4,7 @@ DB_URL=postgresql://root:mokopass@localhost:5432/simple_bank?sslmode=disable
 postgres:
 	docker run --name postgres14 --network bank-network -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=mokopass -d postgres:14-alpine
 
-## postgresrun: start docker 
+## postgresrun: start docker postgres
 postgresrun:
 	docker start postgres14
 
@@ -92,9 +92,17 @@ proto:
 evans:
 	evans --host localhost --port 9090 -r repl
 
+## redis: run a Predis container with specific configurations
+redis:
+	docker run --name redis -p 6379:6379 -d redis:7.0-alpine
+
+## redisrun: start docker redis 
+redisrun:
+	docker start redis
+
 ## help: print this help message
 help:
 	@echo 'Usage:'
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
 
-.PHONY: postgres postgresrun createdb dropdb migrateup migrateup1 migratedown migratedown1 new_migration db_docs db_schema sqlc server mock testcoverhtml dockerbuildimage dockerrunbuildcontainer dockerstart proto evans help
+.PHONY: postgres postgresrun createdb dropdb migrateup migrateup1 migratedown migratedown1 new_migration db_docs db_schema sqlc server mock testcoverhtml dockerbuildimage dockerrunbuildcontainer dockerstart proto evans help redis redisrun
