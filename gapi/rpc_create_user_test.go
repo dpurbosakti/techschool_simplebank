@@ -84,32 +84,6 @@ func TestCreateUser(t *testing.T) {
 				Email:    user.Email,
 			},
 			buildStubs: func(store *mockdb.MockStore, taskDistributor *mockwk.MockTaskDistributor) {
-				store.EXPECT().
-					CreateUserTx(gomock.Any(), gomock.Any()).
-					Times(1).
-					Return(db.CreateUserTxResult{}, sql.ErrConnDone)
-
-				taskDistributor.EXPECT().
-					DistributeTaskSendVerifyEmail(gomock.Any(), gomock.Any(), gomock.Any()).
-					Times(0)
-			},
-			checkResponse: func(t *testing.T, res *pb.CreateUserResponse, err error) {
-				// check response
-				require.Error(t, err)
-				st, ok := status.FromError(err)
-				require.True(t, ok)
-				require.Equal(t, codes.Internal, st.Code())
-			},
-		},
-		{
-			name: "Internal Server Error",
-			req: &pb.CreateUserRequest{
-				Username: user.Username,
-				Password: password,
-				FullName: user.FullName,
-				Email:    user.Email,
-			},
-			buildStubs: func(store *mockdb.MockStore, taskDistributor *mockwk.MockTaskDistributor) {
 				arg := db.CreateUserTxParams{
 					CreateUserParams: db.CreateUserParams{
 						Username: user.Username,
@@ -138,6 +112,32 @@ func TestCreateUser(t *testing.T) {
 				require.Equal(t, user.Username, createdUser.Username)
 				require.Equal(t, user.FullName, createdUser.FullName)
 				require.Equal(t, user.Email, createdUser.Email)
+			},
+		},
+		{
+			name: "Internal Server Error",
+			req: &pb.CreateUserRequest{
+				Username: user.Username,
+				Password: password,
+				FullName: user.FullName,
+				Email:    user.Email,
+			},
+			buildStubs: func(store *mockdb.MockStore, taskDistributor *mockwk.MockTaskDistributor) {
+				store.EXPECT().
+					CreateUserTx(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.CreateUserTxResult{}, sql.ErrConnDone)
+
+				taskDistributor.EXPECT().
+					DistributeTaskSendVerifyEmail(gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, res *pb.CreateUserResponse, err error) {
+				// check response
+				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok)
+				require.Equal(t, codes.Internal, st.Code())
 			},
 		},
 	}
