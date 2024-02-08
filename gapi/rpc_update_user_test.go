@@ -1,110 +1,199 @@
 package gapi
 
-// import (
-// 	"context"
-// 	"database/sql"
-// 	mockdb "simple-bank/db/mock"
-// 	db "simple-bank/db/sqlc"
-// 	"simple-bank/pb"
-// 	"simple-bank/util"
-// 	"testing"
+import (
+	"context"
+	"database/sql"
+	mockdb "simple-bank/db/mock"
+	db "simple-bank/db/sqlc"
+	"simple-bank/pb"
+	"simple-bank/token"
+	"simple-bank/util"
+	"testing"
+	"time"
 
-// 	"github.com/golang/mock/gomock"
-// 	"github.com/stretchr/testify/require"
-// )
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
 
-// func TestUpdateUserAPI(t *testing.T) {
-// 	user, _ := randomUser(t)
+func TestUpdateUserAPI(t *testing.T) {
+	user, _ := randomUser(t)
 
-// 	newName := util.RandomOwner()
-// 	newEmail := util.RandomEmail()
+	newName := util.RandomOwner()
+	newEmail := util.RandomEmail()
+	invalidEmail := "invalid-email"
 
-// 	testCase := []struct {
-// 		name          string
-// 		req           *pb.UpdateUserRequest
-// 		buildStubs    func(store *mockdb.MockStore)
-// 		checkResponse func(t *testing.T, res *pb.UpdateUserResponse, err error)
-// 	}{
-// 		{
-// 			name: "OK",
-// 			req: &pb.UpdateUserRequest{
-// 				FullName: &newName,
-// 				Email:    &newEmail,
-// 			},
-// 			buildStubs: func(store *mockdb.MockStore) {
-// 				arg := db.UpdateUserParams{
-// 					Username: user.Username,
-// 					FullName: sql.NullString{
-// 						String: newName,
-// 						Valid:  true,
-// 					},
-// 					Email: sql.NullString{
-// 						String: newEmail,
-// 						Valid:  true,
-// 					},
-// 				}
+	testCase := []struct {
+		name          string
+		req           *pb.UpdateUserRequest
+		buildStubs    func(store *mockdb.MockStore)
+		buildContext  func(t *testing.T, tokenMaker token.Maker) context.Context
+		checkResponse func(t *testing.T, res *pb.UpdateUserResponse, err error)
+	}{
+		{
+			name: "OK",
+			req: &pb.UpdateUserRequest{
+				Username: user.Username,
+				FullName: &newName,
+				Email:    &newEmail,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.UpdateUserParams{
+					Username: user.Username,
+					FullName: sql.NullString{
+						String: newName,
+						Valid:  true,
+					},
+					Email: sql.NullString{
+						String: newEmail,
+						Valid:  true,
+					},
+				}
 
-// 				updatedUser := db.User{
-// 					Username:          user.Username,
-// 					HashedPassword:    user.HashedPassword,
-// 					FullName:          newName,
-// 					Email:             newEmail,
-// 					PasswordChangedAt: user.PasswordChangedAt,
-// 					CreatedAt:         user.CreatedAt,
-// 					IsEmailVerified:   user.IsEmailVerified,
-// 				}
-// 				store.EXPECT().
-// 					UpdateUser(gomock.Any(), gomock.Eq(arg)).
-// 					Times(1).
-// 					Return(updatedUser, nil)
-// 			},
-// 			checkResponse: func(t *testing.T, res *pb.UpdateUserResponse, err error) {
-// 				// check response
-// 				require.NoError(t, err)
-// 				require.NotNil(t, res)
-// 				updatedUser := res.GetUser()
-// 				require.Equal(t, user.Username, updatedUser.Username)
-// 				require.Equal(t, newName, updatedUser.FullName)
-// 				require.Equal(t, newEmail, updatedUser.Email)
-// 			},
-// 		},
-// 		// {
-// 		// 	name: "OK",
-// 		// 	req: &pb.UpdateUserRequest{
-// 		// 		Username: user.Username,
-// 		// 		FullName: &newName,
-// 		// 		Email:    &newEmail,
-// 		// 	},
-// 		// 	buildStubs: func(store *mockdb.MockStore) {
-// 		// 		store.EXPECT().
-// 		// 			CreateUserTx(gomock.Any(), gomock.Any()).
-// 		// 			Times(1).
-// 		// 			Return(db.CreateUserTxResult{}, nil)
-// 		// 	},
-// 		// 	checkResponse: func(t *testing.T, res *pb.CreateUserResponse, err error) {
-// 		// 		// check response
-// 		// 		require.Error(t, err)
-// 		// 		st, ok := status.FromError(err)
-// 		// 		require.True(t, ok)
-// 		// 		require.Equal(t, codes.Internal, st.Code())
-// 		// 	},
-// 		// },
-// 	}
+				updatedUser := db.User{
+					Username:          user.Username,
+					HashedPassword:    user.HashedPassword,
+					FullName:          newName,
+					Email:             newEmail,
+					PasswordChangedAt: user.PasswordChangedAt,
+					CreatedAt:         user.CreatedAt,
+					IsEmailVerified:   user.IsEmailVerified,
+				}
+				store.EXPECT().
+					UpdateUser(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(updatedUser, nil)
+			},
+			buildContext: func(t *testing.T, tokenMaker token.Maker) context.Context {
+				return newContenxtWithBearerToken(t, tokenMaker, user.Username, time.Minute)
+			},
+			checkResponse: func(t *testing.T, res *pb.UpdateUserResponse, err error) {
+				// check response
+				require.NoError(t, err)
+				require.NotNil(t, res)
+				updatedUser := res.GetUser()
+				require.Equal(t, user.Username, updatedUser.Username)
+				require.Equal(t, newName, updatedUser.FullName)
+				require.Equal(t, newEmail, updatedUser.Email)
+			},
+		},
+		{
+			name: "NotFound",
+			req: &pb.UpdateUserRequest{
+				Username: user.Username,
+				FullName: &newName,
+				Email:    &newEmail,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
 
-// 	for i := range testCase {
-// 		tc := testCase[i]
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			storeCtrl := gomock.NewController(t)
-// 			defer storeCtrl.Finish()
+				store.EXPECT().
+					UpdateUser(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.User{}, sql.ErrNoRows)
+			},
+			buildContext: func(t *testing.T, tokenMaker token.Maker) context.Context {
+				return newContenxtWithBearerToken(t, tokenMaker, user.Username, time.Minute)
+			},
+			checkResponse: func(t *testing.T, res *pb.UpdateUserResponse, err error) {
+				// check response
+				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok)
+				require.Equal(t, codes.NotFound, st.Code())
+			},
+		},
+		{
+			name: "Expired Token",
+			req: &pb.UpdateUserRequest{
+				Username: user.Username,
+				FullName: &newName,
+				Email:    &newEmail,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
 
-// 			store := mockdb.NewMockStore(storeCtrl)
+				store.EXPECT().
+					UpdateUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			buildContext: func(t *testing.T, tokenMaker token.Maker) context.Context {
+				return context.Background()
+			},
+			checkResponse: func(t *testing.T, res *pb.UpdateUserResponse, err error) {
+				// check response
+				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok)
+				require.Equal(t, codes.Unauthenticated, st.Code())
+			},
+		},
+		{
+			name: "NoAuthorization",
+			req: &pb.UpdateUserRequest{
+				Username: user.Username,
+				FullName: &newName,
+				Email:    &newEmail,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
 
-// 			tc.buildStubs(store)
+				store.EXPECT().
+					UpdateUser(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.User{}, sql.ErrNoRows)
+			},
+			buildContext: func(t *testing.T, tokenMaker token.Maker) context.Context {
+				return newContenxtWithBearerToken(t, tokenMaker, user.Username, time.Minute)
+			},
+			checkResponse: func(t *testing.T, res *pb.UpdateUserResponse, err error) {
+				// check response
+				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok)
+				require.Equal(t, codes.NotFound, st.Code())
+			},
+		},
+		{
+			name: "InvalidEmailAddress",
+			req: &pb.UpdateUserRequest{
+				Username: user.Username,
+				FullName: &newName,
+				Email:    &invalidEmail,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
 
-// 			// start test server and send request
-// 			server := newTestServer(t, store, nil)
-// 			res, err := server.UpdateUser(context.Background(), tc.req)
-// 			tc.checkResponse(t, res, err)
-// 		})
-// 	}
-// }
+				store.EXPECT().
+					UpdateUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			buildContext: func(t *testing.T, tokenMaker token.Maker) context.Context {
+				return newContenxtWithBearerToken(t, tokenMaker, user.Username, time.Minute)
+			},
+			checkResponse: func(t *testing.T, res *pb.UpdateUserResponse, err error) {
+				// check response
+				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok)
+				require.Equal(t, codes.InvalidArgument, st.Code())
+			},
+		},
+	}
+
+	for i := range testCase {
+		tc := testCase[i]
+		t.Run(tc.name, func(t *testing.T) {
+			storeCtrl := gomock.NewController(t)
+			defer storeCtrl.Finish()
+
+			store := mockdb.NewMockStore(storeCtrl)
+
+			tc.buildStubs(store)
+
+			// start test server and send request
+			server := newTestServer(t, store, nil)
+
+			ctx := tc.buildContext(t, server.tokenMaker)
+			res, err := server.UpdateUser(ctx, tc.req)
+			tc.checkResponse(t, res, err)
+		})
+	}
+}
