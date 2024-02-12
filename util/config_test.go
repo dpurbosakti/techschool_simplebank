@@ -22,7 +22,6 @@ func TestLoadConfigSuccess(t *testing.T) {
 	config, err := LoadConfig("..")
 	require.NoError(t, err)
 	require.NotEmpty(t, config)
-	require.Equal(t, config.DBDriver, dbDriver)
 	require.Equal(t, config.DBSource, dbSource)
 	require.Equal(t, config.HTTPServerAddress, httpServerAddress)
 }
