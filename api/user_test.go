@@ -338,7 +338,7 @@ func TestLoginUser(t *testing.T) {
 				store.EXPECT().
 					GetUser(gomock.Any(), gomock.Eq("notfound")).
 					Times(1).
-					Return(db.User{}, sql.ErrNoRows)
+					Return(db.User{}, db.ErrRecordNotFound)
 			},
 			checkResponse: func(recorder *httptest.ResponseRecorder) {
 				// check response

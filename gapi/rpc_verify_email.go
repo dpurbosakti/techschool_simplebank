@@ -2,7 +2,7 @@ package gapi
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
 	db "simple-bank/db/sqlc"
 	"simple-bank/pb"
@@ -24,7 +24,7 @@ func (s *Server) VerifyEmail(ctx context.Context, req *pb.VerifyEmailRequest) (*
 		SecretCode: req.GetSecretCode(),
 	})
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			return nil, status.Errorf(codes.NotFound, "failed to verify email: user with email_id %d not found", req.GetEmailId())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to verify email: %s", err.Error())
