@@ -23,6 +23,7 @@ import (
 func TestGetAccountAPI(t *testing.T) {
 	user, _ := randomUser(t)
 	account := randomAccount(user.Username)
+	role := util.DepositorRole
 
 	testCase := []struct {
 		name          string
@@ -35,7 +36,7 @@ func TestGetAccountAPI(t *testing.T) {
 			name:      "OK",
 			accountID: account.ID,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -54,7 +55,7 @@ func TestGetAccountAPI(t *testing.T) {
 			name:      "NotFound",
 			accountID: account.ID,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -72,7 +73,7 @@ func TestGetAccountAPI(t *testing.T) {
 			name:      "InternalServerError",
 			accountID: account.ID,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -90,7 +91,7 @@ func TestGetAccountAPI(t *testing.T) {
 			name:      "InvalidID",
 			accountID: 0,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -107,7 +108,7 @@ func TestGetAccountAPI(t *testing.T) {
 			name:      "UnAuthorized",
 			accountID: account.ID,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, "wrong owner", time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, "wrong owner", role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -171,6 +172,8 @@ func requireBodyMatchAccount(t *testing.T, body *bytes.Buffer, account db.Accoun
 func TestCreateAccount(t *testing.T) {
 	user, _ := randomUser(t)
 	account := randomAccount(user.Username)
+	role := util.DepositorRole
+
 	testCase := []struct {
 		name          string
 		body          gin.H
@@ -184,7 +187,7 @@ func TestCreateAccount(t *testing.T) {
 				"currency": account.Currency,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -210,7 +213,7 @@ func TestCreateAccount(t *testing.T) {
 				"currency": "IDR",
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -229,7 +232,7 @@ func TestCreateAccount(t *testing.T) {
 				"currency": account.Currency,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -253,7 +256,7 @@ func TestCreateAccount(t *testing.T) {
 				"currency": 55,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -272,7 +275,7 @@ func TestCreateAccount(t *testing.T) {
 				"currency": account.Currency,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -324,6 +327,7 @@ func TestUpdateAccount(t *testing.T) {
 	user, _ := randomUser(t)
 	account := randomAccount(user.Username)
 	updatedBalance := 100
+	role := util.DepositorRole
 
 	testCase := []struct {
 		name          string
@@ -338,7 +342,7 @@ func TestUpdateAccount(t *testing.T) {
 				"balance": updatedBalance,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -363,7 +367,7 @@ func TestUpdateAccount(t *testing.T) {
 				"balance": 0,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -382,7 +386,7 @@ func TestUpdateAccount(t *testing.T) {
 				"balance": updatedBalance,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -561,6 +565,7 @@ func TestListAccount(t *testing.T) {
 	listAccount := []db.Account{account1, account2}
 	pageID := 1
 	pageSize := 5
+	role := util.DepositorRole
 
 	testCase := []struct {
 		name          string
@@ -576,7 +581,7 @@ func TestListAccount(t *testing.T) {
 				PageSize: int32(pageSize),
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -609,7 +614,7 @@ func TestListAccount(t *testing.T) {
 				PageSize: 1,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
@@ -632,7 +637,7 @@ func TestListAccount(t *testing.T) {
 				PageSize: int32(pageSize),
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationBearer, user.Username, role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
