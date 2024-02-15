@@ -49,6 +49,8 @@ func (s *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb
 		},
 	}
 
+	// log.Info().Msg(">> creating user ...")
+	// time.Sleep(10 * time.Second)
 	txResult, err := s.store.CreateUserTx(ctx, arg)
 	if err != nil {
 		if db.ErrorCode(err) == db.UniqueViolation {
@@ -60,6 +62,8 @@ func (s *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb
 	rsp := &pb.CreateUserResponse{
 		User: convertUser(txResult.User),
 	}
+
+	// log.Info().Msg(">> done creating user.")
 	return rsp, nil
 }
 
